@@ -1,0 +1,15 @@
+# Postgres for local development (`bun run db:start`). Production uses a database managed by Orchard.
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: trmnt
+      POSTGRES_PASSWORD: trmnt
+      POSTGRES_DB: trmnt
+    ports:
+      - '5432:5432'
+    volumes:
+      - db:/var/lib/postgresql/data
+
+volumes:
+  db:
