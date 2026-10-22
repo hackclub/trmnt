@@ -5,23 +5,22 @@ export const SHOP_ITEMS = {
 	diy_kit: {
 		name: 'TRMNL DIY Kit',
 		price: 300,
-		// Every description but the OG TRMNL's is a stand-in until the real copy is written
-		description: 'the parts inside a TRMNL, ready to build into whatever you like!'
+		description: 'A Seeed DIY TRMNL kit, for you to build your own device. You have to make your own enclosure though!'
 	},
 	bwry: {
 		name: 'TRMNL (BWRY)',
 		price: 450,
-		description: 'a TRMNL with a four-color screen: black, white, red and yellow!'
+		description: 'an OG TRMNL, but breaking the mold with a four-color screen! guac\'s favorite.'
 	},
 	byod_license: {
 		name: 'BYOD License',
 		price: 150,
-		description: 'connects a device you built or already own to TRMNL’s servers and plugins!'
+		description: 'gives you a key to connect a device you own or build to TRMNL\'s infrastructure.'
 	},
 	founder_delivered: {
 		name: 'Founder-Delivered TRMNL',
 		price: 3000,
-		description: 'a TRMNL, delivered in person by TRMNL’s founder!'
+		description: 'yes, you read that right. the founder of TRMNL, Ryan Kulp, will hand-deliver a TRMNL to you.'
 	},
 	og: {
 		name: 'TRMNL (Official)',
@@ -31,7 +30,7 @@ export const SHOP_ITEMS = {
 	trmnl_x: {
 		name: 'TRMNL X',
 		price: 750,
-		description: 'TRMNL’s bigger, sharper sibling!'
+		description: 'a backorder for the crazy TRMNL X, the TRMNL\'s overachieving older sibling with touch gestures and partial refresh. it\'s waterproof too, in case you were gonna swim with your Pokemon of the Day.'
 	}
 } as const;
 

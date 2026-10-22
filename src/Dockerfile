@@ -1,4 +1,4 @@
-# Builds TRMNT and serves it with bun. Orchard builds this with frontend/ as the context.
+# Builds TRMNT and serves it with bun. Build it with src/ as the context.
 # Configuration comes from the environment at runtime (see src/env.ts), not at build time.
 
 FROM oven/bun:1.3 AS build

@@ -30,7 +30,8 @@
 	const item = $derived(SHOP_ITEMS[id]);
 </script>
 
-<div class="item" style:--x={x} style:--y={y}>
+<!-- Descriptions widen for longer copy, but stop short of the page's right edge -->
+<div class="item" style:--x={x} style:--y={y} style:--description-max={Math.min(400, 1900 - (x + 256))}>
 	<div class="card">{@render children()}</div>
 	<h2 class="title" class:tall={tallTitle}>{item.name}</h2>
 	<p class="price" class:wide={item.price >= 1000}>
@@ -160,13 +161,18 @@
 		cursor: not-allowed;
 	}
 
+	/* Figma's box is 246 × 152; longer descriptions grow it, wider first and then taller */
 	.description {
 		left: calc(256 * var(--u));
 		top: calc(40 * var(--u));
-		width: calc(246 * var(--u));
-		height: calc(152 * var(--u));
-		padding: 0 calc(8 * var(--u));
+		width: max-content;
+		min-width: calc(246 * var(--u));
+		max-width: calc(var(--description-max) * var(--u));
+		min-height: calc(152 * var(--u));
+		padding: calc(12 * var(--u)) calc(16 * var(--u));
 		visibility: hidden;
+		/* Some cover a neighbouring card, which the pointer should reach through them */
+		pointer-events: none;
 	}
 
 	.item:hover .description,

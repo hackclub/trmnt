@@ -5,9 +5,10 @@ import { defineConfig, type Plugin } from 'vite';
 export default defineConfig({
 	server: {
 		// Under Bun, Vite's default 'localhost' only listens on IPv6 (::1), which tunnels that
-		// connect to 127.0.0.1, like Conduit, can't reach. Browsers fall back to this for localhost.
+		// connect to 127.0.0.1 can't reach. Browsers fall back to this for localhost.
 		host: '127.0.0.1',
-		allowedHosts: ["trmntdev.conduit.ws", "printer.osiris-atria.ts.net"]
+		// The Tailscale Funnel used for testing sign-in on a real HTTPS address
+		allowedHosts: ['printer.osiris-atria.ts.net']
 	},
 	plugins: [
 		sveltekit({
