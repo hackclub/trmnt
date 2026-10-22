@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import AppHeader from '#lib/components/app/AppHeader.svelte';
@@ -7,37 +7,38 @@
 	import ProjectForm from '#lib/components/app/ProjectForm.svelte';
 	import SectionHeading from '#lib/components/SectionHeading.svelte';
 	import plus from '#lib/assets/figma/plus.svg';
-	import type { Project } from '#lib/types.ts';
+	import type { OwnProject } from '#lib/types.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 
-	let projectForm: ProjectForm;
+	let createForm: ProjectForm;
+	let submitForm = $state<ProjectForm>();
+	/** The project the submit popup is for */
+	let submitting = $state<OwnProject | null>(null);
 
-	// Coming back from connecting Hackatime partway through creating a project reopens the form
+	// Projects waiting on a reviewer leave "your projects" for a section of their own
+	const yours = $derived(data.yourProjects.filter((project) => project.status !== 'pending'));
+	const underReview = $derived(data.yourProjects.filter((project) => project.status === 'pending'));
+
+	async function openSubmit(project: OwnProject) {
+		submitting = project;
+		await tick();
+		submitForm?.show();
+	}
+
+	// Coming back from connecting Hackatime or linking Hack Club partway through creating or
+	// submitting a project reopens its form
 	onMount(() => {
-		if (page.url.searchParams.has('create')) projectForm.show();
+		if (page.url.searchParams.has('create')) createForm.show();
+		const project = data.yourProjects.find((p) => p.id === page.url.searchParams.get('submit'));
+		if (project) openSubmit(project);
 	});
 </script>
 
 <svelte:head>
 	<title>Home — TRMNT</title>
 </svelte:head>
-
-{#snippet projects(title: string, list: Project[], placeholder?: string)}
-	<section>
-		<SectionHeading>{title}</SectionHeading>
-		{#if list.length === 0 && placeholder}
-			<p class="placeholder">{placeholder}</p>
-		{:else}
-			<div class="grid">
-				{#each list as project (project.id)}
-					<ProjectCard {project} />
-				{/each}
-			</div>
-		{/if}
-	</section>
-{/snippet}
 
 <!-- A full-width rule paired with a shorter one, which the second divider mirrors -->
 {#snippet divider(flipped: boolean)}
@@ -62,26 +63,72 @@
 		</p>
 	{/if}
 
-	{@render projects('your projects', data.yourProjects)}
+	<section>
+		<SectionHeading>your projects</SectionHeading>
+		<div class="grid yours">
+			{#each yours as project (project.id)}
+				<ProjectCard
+					{project}
+					frame={project.status === 'approved' ? 'approved' : 'plain'}
+					onsubmit={() => openSubmit(project)}
+				/>
+			{/each}
+		</div>
+	</section>
 
-	<button class="create" type="button" onclick={() => projectForm.show()}>
+	<button class="create" type="button" onclick={() => createForm.show()}>
 		<img src={plus} alt="" />
 		create a project
 	</button>
 
+	{#if underReview.length > 0}
+		<section class="under-review">
+			<h2>- under review -</h2>
+			<div class="reviewing">
+				{#each underReview as project (project.id)}
+					<ProjectCard {project} frame="review" />
+				{/each}
+			</div>
+		</section>
+	{/if}
+
 	{@render divider(false)}
-	{@render projects('latest projects', data.latestProjects, 'nothing yet!')}
+	<section>
+		<SectionHeading>latest projects</SectionHeading>
+		{#if data.latestProjects.length === 0}
+			<p class="placeholder">nothing yet!</p>
+		{:else}
+			<div class="grid">
+				{#each data.latestProjects as project (project.id)}
+					<ProjectCard {project} />
+				{/each}
+			</div>
+		{/if}
+	</section>
 	{@render divider(true)}
 
 	<a class="shop" href={resolve('shop')}><span>shop!</span></a>
 </main>
 
 <ProjectForm
-	bind:this={projectForm}
+	bind:this={createForm}
 	hackatime={data.hackatime}
 	linkableProjects={data.linkableProjects}
-	problem={form?.create?.message}
+	problem={form?.create}
 />
+
+<!-- Made afresh for each project, so the form starts from that project's details -->
+{#if submitting}
+	{#key submitting.id}
+		<ProjectForm
+			bind:this={submitForm}
+			project={submitting}
+			hackatime={data.hackatime}
+			linkableProjects={data.linkableProjects}
+			problem={form?.submit?.projectId === submitting.id ? form.submit : undefined}
+		/>
+	{/key}
+{/if}
 
 <style>
 	main {
@@ -115,6 +162,55 @@
 		grid-template-columns: repeat(auto-fill, calc(435 * var(--u)));
 		gap: calc(57 * var(--u));
 		margin-top: calc(var(--below-heading, 35) * var(--u));
+	}
+
+	/* Three centred columns, set further below the heading so the tags across the first row's
+	   corners clear it */
+	.grid.yours {
+		grid-template-columns: repeat(3, calc(435 * var(--u)));
+		justify-content: center;
+		gap: calc(104 * var(--u)) calc(139 * var(--u));
+		margin-top: calc(57 * var(--u));
+	}
+
+	/* Between the rules that run out to the card column's edges */
+	.under-review {
+		padding: 0;
+		margin-bottom: calc(122.5 * var(--u));
+	}
+
+	.under-review h2 {
+		position: relative;
+		margin: 0;
+		font: italic 500 calc(48 * var(--u)) / normal var(--font-serif);
+		color: var(--salmon);
+		text-align: center;
+	}
+
+	.under-review h2::before,
+	.under-review h2::after {
+		content: '';
+		position: absolute;
+		top: calc(31 * var(--u));
+		width: calc(691 * var(--u));
+		height: max(1px, calc(1 * var(--u)));
+		background: white;
+	}
+
+	.under-review h2::before {
+		left: calc(51 * var(--u));
+	}
+
+	.under-review h2::after {
+		left: calc(1177 * var(--u));
+	}
+
+	.reviewing {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: calc(104 * var(--u)) calc(139 * var(--u));
+		margin-top: calc(54 * var(--u));
 	}
 
 	/* Takes up a row of cards' height, so the page keeps its shape while there are none */

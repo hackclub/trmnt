@@ -10,6 +10,9 @@ export const PROJECT_TYPES = {
 
 export type ProjectType = keyof typeof PROJECT_TYPES;
 
-/** Screenshots: optional when creating a project, required to submit one */
-export const SCREENSHOT_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+/**
+ * Screenshots: optional when creating a project, required to submit one. Still images only, as
+ * the Unified YSWS database requires, so no GIFs.
+ */
+export const SCREENSHOT_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 export const SCREENSHOT_MAX_BYTES = 5 * 1024 * 1024;

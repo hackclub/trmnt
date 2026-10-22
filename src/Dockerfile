@@ -27,7 +27,7 @@ COPY package.json ./
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/build ./build
 COPY drizzle ./drizzle
-COPY scripts/migrate.ts ./scripts/
+COPY scripts/migrate.ts scripts/track-activity.ts ./scripts/
 USER bun
 EXPOSE 3000
 # Migrations run first so the schema always matches the code that's starting

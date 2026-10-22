@@ -82,6 +82,102 @@ export async function fetchNewProjectNames(accessToken: string): Promise<string[
 		.map((project) => project.name);
 }
 
+/**
+ * Time logged on these Hackatime projects between `start` and `end` (the end of today if left
+ * out), with time on two at once counted once. Hackatime asks programs to get totals this way
+ * rather than by adding projects' times together, which double counts that overlap. Null when
+ * the token no longer works.
+ */
+export async function fetchSeconds(
+	accessToken: string,
+	names: string[],
+	start: Date,
+	end?: Date
+): Promise<number | null> {
+	if (names.length === 0) return 0;
+
+	const url = new URL('/api/v1/users/my/stats', ORIGIN);
+	// Comma-separated, so a project with a comma in its name can't be counted
+	url.searchParams.set('filter_by_project', names.join(','));
+	url.searchParams.set('start_date', start.toISOString());
+	if (end) url.searchParams.set('end_date', end.toISOString());
+	url.searchParams.set('total_seconds', 'true');
+	// Splits time at the window's edges, so consecutive days add up to the whole
+	url.searchParams.set('boundary_aware', 'true');
+
+	const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+	if (response.status === 401 || response.status === 403) return null;
+	if (!response.ok) throw new Error(`Hackatime returned ${response.status} for stats`);
+
+	const body: { total_seconds: number } = await response.json();
+	return Math.round(body.total_seconds);
+}
+
+/** The language most of the time on these projects since `start` went into, if any */
+export async function fetchTopLanguage(
+	accessToken: string,
+	names: string[],
+	start: Date
+): Promise<string | null> {
+	if (names.length === 0) return null;
+	const url = new URL('/api/v1/users/my/stats', ORIGIN);
+	url.searchParams.set('features', 'languages');
+	url.searchParams.set('filter_by_project', names.join(','));
+	url.searchParams.set('start_date', start.toISOString());
+
+	const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+	if (!response.ok) return null;
+	const body: { data?: { languages?: { name: string; total_seconds: number }[] } } = await response.json();
+	const [top] = (body.data?.languages ?? []).toSorted((a, b) => b.total_seconds - a.total_seconds);
+	return top?.name ?? null;
+}
+
+export type TrustLevel = 'blue' | 'green' | 'red';
+
+/**
+ * Who the person is on Hackatime: their numeric ID, which reviews cite, and their trust level.
+ * Red means Hackatime has banned them, and Hack Club's rule is to ban them from the program too.
+ * Null when the token no longer works.
+ */
+export async function fetchMe(
+	accessToken: string
+): Promise<{ id: number; trustLevel: TrustLevel | null; githubUsername: string | null } | null> {
+	const response = await fetch(new URL('/api/v1/authenticated/me', ORIGIN), {
+		headers: { Authorization: `Bearer ${accessToken}` }
+	});
+	if (response.status === 401 || response.status === 403) return null;
+	if (!response.ok) throw new Error(`Hackatime returned ${response.status} for /me`);
+
+	const body: {
+		id: number;
+		github_username?: string | null;
+		trust_factor?: { trust_level?: string };
+	} = await response.json();
+	return {
+		id: body.id,
+		trustLevel: parseTrustLevel(body.trust_factor?.trust_level),
+		githubUsername: body.github_username || null
+	};
+}
+
+/**
+ * The trust level of whoever has this Slack ID on Hackatime, which anyone can look up. Null when
+ * they have no Hackatime account.
+ */
+export async function fetchTrustBySlackId(slackId: string): Promise<TrustLevel | null> {
+	const response = await fetch(
+		new URL(`/api/v1/users/${encodeURIComponent(slackId)}/trust_factor`, ORIGIN)
+	);
+	if (response.status === 404) return null;
+	if (!response.ok) throw new Error(`Hackatime returned ${response.status} for a trust factor`);
+	const body: { trust_level?: string } = await response.json();
+	return parseTrustLevel(body.trust_level);
+}
+
+function parseTrustLevel(level: unknown): TrustLevel | null {
+	return level === 'blue' || level === 'green' || level === 'red' ? level : null;
+}
+
 export interface HackatimeProject {
 	name: string;
 	/** Logged since `start` */

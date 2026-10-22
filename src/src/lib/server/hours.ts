@@ -2,7 +2,30 @@ import { and, eq, isNull, lt, or } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.ts';
 import { projects, users } from '#lib/server/db/schema.ts';
 import { decrypt } from '#lib/server/crypto.ts';
-import { fetchProjects } from '#lib/server/hackatime.ts';
+import { fetchSeconds } from '#lib/server/hackatime.ts';
+import { PROGRAM_START } from '#lib/server/program.ts';
+
+/**
+ * Time logged on these of a user's Hackatime projects since the program started, asked of
+ * Hackatime now rather than read from the last sync. Null when Hackatime isn't connected.
+ */
+export async function secondsOn(userId: string, names: string[]): Promise<number | null> {
+	const [user] = await db
+		.select({ token: users.hackatimeAccessToken })
+		.from(users)
+		.where(eq(users.id, userId));
+	if (!user?.token) return null;
+
+	return fetchSeconds(await decrypt(user.token), names, PROGRAM_START);
+}
+
+/** Drops a Hackatime token that stopped working, so its owner is asked to reconnect */
+export async function forgetHackatime(userId: string) {
+	await db
+		.update(users)
+		.set({ hackatimeAccessToken: null, hackatimeSyncedAt: null })
+		.where(eq(users.id, userId));
+}
 
 /** How stale a user's hours can get before viewing them asks Hackatime again */
 const SYNC_EVERY = 5 * 60 * 1000;
@@ -29,28 +52,23 @@ export async function syncHours(userId: string): Promise<boolean> {
 	if (!user) return true;
 	if (!user.token) return false;
 
-	const hackatimeProjects = await fetchProjects(await decrypt(user.token));
-	if (!hackatimeProjects) {
-		await db
-			.update(users)
-			.set({ hackatimeAccessToken: null, hackatimeSyncedAt: null })
-			.where(eq(users.id, userId));
-		return false;
-	}
-
-	const secondsByName = new Map(hackatimeProjects.map((project) => [project.name, project.seconds]));
+	const token = await decrypt(user.token);
 	const own = await db
 		.select({ id: projects.id, linked: projects.hackatimeProjects })
 		.from(projects)
 		.where(eq(projects.userId, userId));
+	// Each project's total comes from Hackatime as one figure, so overlapping time isn't doubled
+	const totals = await Promise.all(
+		own.map((project) => fetchSeconds(token, project.linked, PROGRAM_START))
+	);
+	if (totals.includes(null)) {
+		await forgetHackatime(userId);
+		return false;
+	}
 
 	await db.transaction(async (tx) => {
-		for (const project of own) {
-			const secondsLogged = project.linked.reduce(
-				(total, name) => total + (secondsByName.get(name) ?? 0),
-				0
-			);
-			await tx.update(projects).set({ secondsLogged }).where(eq(projects.id, project.id));
+		for (const [i, project] of own.entries()) {
+			await tx.update(projects).set({ secondsLogged: totals[i]! }).where(eq(projects.id, project.id));
 		}
 	});
 	return true;

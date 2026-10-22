@@ -2,9 +2,12 @@ import { sql } from 'drizzle-orm';
 import {
 	boolean,
 	customType,
+	date,
 	index,
 	integer,
 	pgTable,
+	pgView,
+	primaryKey,
 	text,
 	timestamp,
 	uuid
@@ -44,6 +47,21 @@ export const users = pgTable('users', {
 	hackatimeAccessToken: text(),
 	/** When this user's project hours were last refreshed from Hackatime */
 	hackatimeSyncedAt: timestamp({ withTimezone: true }),
+	/** Their numeric Hackatime ID, which hour justifications cite. Kept current by the activity check. */
+	hackatimeUserId: integer(),
+	/** Red means Hackatime has banned them. Kept current by the activity check. */
+	hackatimeTrustLevel: text({ enum: ['blue', 'green', 'red'] }),
+	/** From Hackatime, for the program's Airtable */
+	githubUsername: text(),
+
+	/** Banned people can't sign in */
+	bannedAt: timestamp({ withTimezone: true }),
+	banReason: text(),
+	/**
+	 * When an admin lifted their ban. A red Hackatime trust level bans automatically, but not
+	 * someone an admin has decided to let back in.
+	 */
+	banLiftedAt: timestamp({ withTimezone: true }),
 
 	createdAt: createdAt()
 });
@@ -121,7 +139,20 @@ export const submissions = pgTable(
 		/** What the reviewer counted, which may be less than what was logged */
 		secondsApproved: integer(),
 		reviewerId: uuid().references(() => users.id, { onDelete: 'set null' }),
+		/** Why it was rejected, which the participant sees */
+		reason: text(),
+		/** The approval's justification: internal, for Airtable and spot-checkers */
 		reviewerNotes: text(),
+		/** BFTs the approval awarded */
+		bftsAwarded: integer(),
+		/** Its project in Robert, Telescreen's fraud review desk, once sent there */
+		robertProjectId: text(),
+		/** Robert's state when last checked: awaiting_review, awaiting_outcome, rejected_fraud or decided */
+		robertState: text(),
+		/** Robert's fraud reviewer's score, 1 to 10 */
+		robertTrustScore: integer(),
+		/** Robert's fraud reviewer's note */
+		robertNote: text(),
 		/** Set once the approved project has been reported to the program's Airtable base */
 		airtableRecordId: text(),
 		createdAt: createdAt(),
@@ -129,6 +160,41 @@ export const submissions = pgTable(
 	},
 	(table) => [index().on(table.projectId), index().on(table.status)]
 );
+
+/**
+ * How long each person worked on their projects each day: what makes them a daily active user.
+ * Filled in by the activity check, with rows only for days they did some work.
+ */
+export const dailyActivity = pgTable(
+	'daily_activity',
+	{
+		userId: uuid()
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		/** A day in UTC */
+		day: date({ mode: 'string' }).notNull(),
+		/** Logged that day on the Hackatime projects linked to their TRMNT projects */
+		seconds: integer().notNull(),
+		checkedAt: timestamp({ withTimezone: true }).notNull().defaultNow()
+	},
+	(table) => [primaryKey({ columns: [table.userId, table.day] }), index().on(table.day)]
+);
+
+/**
+ * One row per Hackatime project linked to a TRMNT project, the shape Hack Club's DAU wizard
+ * (dashbored) wants for mapping people to their Hackatime projects
+ */
+export const hackatimeProjectLinks = pgView('hackatime_project_links', {
+	userId: uuid('user_id').notNull(),
+	hackatimeUserId: integer('hackatime_user_id'),
+	slackId: text('slack_id'),
+	projectId: uuid('project_id').notNull(),
+	hackatimeProject: text('hackatime_project').notNull()
+}).as(sql`
+	select projects.user_id, users.hackatime_user_id, users.slack_id, projects.id as project_id,
+		unnest(projects.hackatime_projects) as hackatime_project
+	from projects join users on users.id = projects.user_id
+`);
 
 /** Things bought in the shop. Their BFTs are spent by a ledger row pointing back here. */
 export const orders = pgTable(
@@ -147,7 +213,12 @@ export const orders = pgTable(
 			.notNull()
 			.default('pending'),
 		createdAt: createdAt(),
-		fulfilledAt: timestamp({ withTimezone: true })
+		fulfilledAt: timestamp({ withTimezone: true }),
+		trackingNumber: text(),
+		/** An admin's note on fulfilling or cancelling it, which the participant is sent */
+		note: text(),
+		/** Cancelled orders are refunded */
+		cancelledAt: timestamp({ withTimezone: true })
 	},
 	(table) => [index().on(table.userId), index().on(table.status)]
 );
@@ -162,7 +233,9 @@ export const ledger = pgTable(
 			.references(() => users.id, { onDelete: 'cascade' }),
 		/** Positive for credits, negative for spending */
 		amount: integer().notNull(),
-		reason: text({ enum: ['submission_approved', 'shop_order', 'adjustment'] }).notNull(),
+		reason: text({
+			enum: ['submission_approved', 'shop_order', 'shop_refund', 'adjustment']
+		}).notNull(),
 		submissionId: uuid().references(() => submissions.id, { onDelete: 'set null' }),
 		orderId: uuid().references(() => orders.id, { onDelete: 'set null' }),
 		note: text(),

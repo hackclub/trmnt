@@ -29,6 +29,20 @@
       "when": 1792682493501,
       "tag": "0003_shop_orders",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792691822684,
+      "tag": "0004_daily_activity",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792701673689,
+      "tag": "0005_admin_review",
+      "breakpoints": true
     }
   ]
 }

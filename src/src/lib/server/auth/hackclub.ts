@@ -131,6 +131,8 @@ export interface HackClubDetails {
 	birthday: string | null;
 	/** The primary one first */
 	addresses: HackClubAddress[];
+	verificationStatus: User['verificationStatus'];
+	yswsEligible: boolean;
 	/** The account hasn't granted all of this yet, so it has to go through Hack Club again */
 	needsConsent: boolean;
 }
@@ -145,6 +147,9 @@ interface MeResponse {
 		primary_email?: string;
 		phone_number?: string;
 		birthday?: string;
+		verification_status?: string;
+		/** Left out when false, along with every other blank field */
+		ysws_eligible?: boolean;
 		addresses?: {
 			first_name?: string;
 			last_name?: string;
@@ -189,6 +194,8 @@ export async function fetchDetails(accessToken: string): Promise<HackClubDetails
 		phoneNumber: identity.phone_number ?? null,
 		birthday: identity.birthday ?? null,
 		addresses: addresses.toSorted((a, b) => Number(b.primary) - Number(a.primary)),
+		verificationStatus: parseVerificationStatus(identity.verification_status),
+		yswsEligible: identity.ysws_eligible === true,
 		needsConsent: SUBMIT_ONLY_SCOPES.some((scope) => !scopes.includes(scope))
 	};
 }

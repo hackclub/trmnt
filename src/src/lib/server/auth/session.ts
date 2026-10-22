@@ -29,7 +29,8 @@ export async function validateSession(cookies: Cookies) {
 		.innerJoin(users, eq(sessions.userId, users.id))
 		.where(eq(sessions.id, id));
 
-	if (!row || row.expiresAt.getTime() <= Date.now()) {
+	// Banning ends someone's sessions, but this catches any that start or live on regardless
+	if (!row || row.expiresAt.getTime() <= Date.now() || row.user.bannedAt) {
 		if (row) await db.delete(sessions).where(eq(sessions.id, id));
 		cookies.delete(COOKIE, { path: '/' });
 		return null;

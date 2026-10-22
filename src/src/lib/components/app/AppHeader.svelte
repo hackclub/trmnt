@@ -7,7 +7,7 @@
 </script>
 
 <header>
-	<a class="name" href={resolve('home')}>{user.name}</a>
+	<span class="name">{user.name}</span>
 	<BalancePill balance={user.balance} />
 	<!-- Not in Figma: tucked under the balance so it doesn't move anything that is -->
 	<form class="sign-out" method="POST" action={resolve('auth/signout')}>

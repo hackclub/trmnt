@@ -11,7 +11,8 @@
 		hackclub: 'Hack Club couldn\'t sign you in. Try again.',
 		no_email: 'Your Hack Club account doesn\'t have a verified email address.',
 		email_taken: 'That email belongs to an account linked to a different Hack Club account.',
-		linked_elsewhere: 'That Hack Club account is already linked to another TRMNT account.'
+		linked_elsewhere: 'That Hack Club account is already linked to another TRMNT account.',
+		banned: 'This account has been banned from TRMNT.'
 	};
 
 	const query = $derived(`?redirectTo=${encodeURIComponent(data.redirectTo)}`);

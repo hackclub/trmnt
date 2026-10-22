@@ -1,7 +1,7 @@
 import { eq, sql } from 'drizzle-orm';
 import { ADMIN_EMAILS } from '$app/env/private';
 import { db } from '#lib/server/db/index.ts';
-import { ledger, users, type User } from '#lib/server/db/schema.ts';
+import { ledger, sessions, users, type User } from '#lib/server/db/schema.ts';
 import { encrypt } from '#lib/server/crypto.ts';
 import type { HackClubIdentity } from '#lib/server/auth/hackclub.ts';
 
@@ -97,6 +97,37 @@ export async function linkHackClub(
 	if (linked && linked.id !== user.id) return 'linked_elsewhere';
 
 	return update(user, await hackClubFields(identity), identity);
+}
+
+/** Bans someone and signs them out everywhere */
+export async function banUser(userId: string, reason: string) {
+	await db
+		.update(users)
+		.set({ bannedAt: new Date(), banReason: reason })
+		.where(eq(users.id, userId));
+	await db.delete(sessions).where(eq(sessions.userId, userId));
+}
+
+/** Lets someone back in, and stops a red Hackatime trust level banning them again */
+export async function liftBan(userId: string) {
+	await db
+		.update(users)
+		.set({ bannedAt: null, banReason: null, banLiftedAt: new Date() })
+		.where(eq(users.id, userId));
+}
+
+/**
+ * Bans someone Hackatime has banned (trust level red), unless an admin has already let them
+ * back in. Returns whether they're banned now.
+ */
+export async function banIfRedOnHackatime(
+	user: Pick<User, 'id' | 'bannedAt' | 'banLiftedAt'>,
+	trustLevel: string | null
+): Promise<boolean> {
+	if (user.bannedAt) return true;
+	if (trustLevel !== 'red' || user.banLiftedAt) return false;
+	await banUser(user.id, 'Hackatime trust level is red');
+	return true;
 }
 
 /** Reads through `client` when given one, e.g. a transaction that's about to spend */

@@ -8,6 +8,10 @@ export const variables = defineEnvVars({
 		description: 'Where people reach the site, e.g. `https://trmnt.hackclub.com`. adapter-node needs it in production. In development, set it when a tunnel serves HTTPS but hands the dev server plain HTTP (Tailscale Funnel does), or OAuth redirect URIs come out as http://.',
 		schema: optional
 	},
+	CRON_SECRET: {
+		description: 'Lets the scheduled activity check (scripts/track-activity.ts) call /internal/track-activity. Any long random string, e.g. `openssl rand -base64 32`. That endpoint is off without it.',
+		schema: optional
+	},
 	DATABASE_URL: {
 		description: 'Postgres connection string. Orchard provides this for its managed databases.'
 	},
@@ -49,6 +53,26 @@ export const variables = defineEnvVars({
 	},
 	POSTMARK_SIGN_IN_TEMPLATE: {
 		description: 'Alias of the Postmark template for sign-in codes. It gets the `code` and `minutes` variables.',
+		schema: optional
+	},
+	AIRTABLE_TOKEN: {
+		description: 'Personal access token for the program’s Airtable base, with data.records:write. Approving a project creates its record there, which goes on to the Unified YSWS database.',
+		schema: optional
+	},
+	AIRTABLE_BASEID: {
+		description: 'ID of that base, starting `app`. Its "YSWS Project Submission" table gets the records.',
+		schema: optional
+	},
+	ROBERT_API_KEY: {
+		description: 'Event API key from Robert (Telescreen’s fraud review desk), under Settings → API keys. Starts `ysws_`. "Send to Robert" is off without it.',
+		schema: optional
+	},
+	ROBERT_WEBHOOK_SECRET: {
+		description: 'Signing secret for Robert’s outcome webhooks to /internal/robert-webhook. Starts `whsec_`; shown once when the webhook URL is set.',
+		schema: optional
+	},
+	SLACK_BOT_TOKEN: {
+		description: 'Bot token for a Slack app with users:read (profile pictures in the admin panel), chat:write and im:write (messaging people about their orders).',
 		schema: optional
 	},
 	EMAIL_FROM: {

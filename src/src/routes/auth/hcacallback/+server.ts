@@ -10,7 +10,8 @@ import {
 import { takeFlow } from '#lib/server/auth/oauth-flow.ts';
 import { createSession } from '#lib/server/auth/session.ts';
 import { publicCallbackUrl } from '#lib/server/origin.ts';
-import { findOrCreateByHackClub, linkHackClub } from '#lib/server/users.ts';
+import { fetchTrustBySlackId } from '#lib/server/hackatime.ts';
+import { banIfRedOnHackatime, findOrCreateByHackClub, linkHackClub } from '#lib/server/users.ts';
 import type { RequestHandler } from './$types';
 
 // Hack Club sends the browser back here with a code to exchange for the person's identity
@@ -34,6 +35,14 @@ export const GET: RequestHandler = async ({ url, cookies, locals }) => {
 	} else {
 		const user = await findOrCreateByHackClub(identity);
 		if (typeof user === 'string') return fail(user);
+		// Anyone Hackatime has banned is banned here too, from their first sign-in
+		const trustLevel = identity.slackId
+			? await fetchTrustBySlackId(identity.slackId).catch((err) => {
+					console.error('Checking Hackatime trust failed', err);
+					return null;
+				})
+			: null;
+		if (await banIfRedOnHackatime(user, trustLevel)) return fail('banned');
 		await createSession(cookies, user.id);
 	}
 

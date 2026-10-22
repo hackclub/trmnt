@@ -74,6 +74,9 @@ export const actions: Actions = {
 		}
 
 		const user = await findOrCreateByEmail(email);
+		if (user.bannedAt) {
+			return fail(403, { email, codeSent: true, message: 'This account has been banned from TRMNT.' });
+		}
 		await createSession(cookies, user.id);
 		redirect(303, safeRedirect(form.get('redirectTo'), resolve('home')));
 	}
