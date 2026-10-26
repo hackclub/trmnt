@@ -29,7 +29,7 @@
 	<title>Sign in — TRMNT</title>
 </svelte:head>
 
-<main>
+<main class="signin">
 	{#each leftLines as [y, length]}
 		<span class="line from-left" style:--y={y} style:--length={length}></span>
 	{/each}
@@ -39,6 +39,23 @@
 	<span class="diagonal left-b"></span>
 	<span class="diagonal right-a"></span>
 	<span class="diagonal right-b"></span>
+
+	<!-- Ornaments in the bottom corners, each set kept in its corner of the window -->
+	<div class="corner left">
+		<span class="upright" style:--x={48} style:--y={839}></span>
+		<span class="upright" style:--x={78} style:--y={964}></span>
+		<span class="slant" style:--x={0} style:--y={940} style:--length={240.78} style:--angle={-34.68}></span>
+		<span class="slant" style:--x={0} style:--y={960} style:--length={240.78} style:--angle={-34.68}></span>
+		<span class="arc" style:--cx={0.5} style:--cy={1079} style:--r={142.8}></span>
+	</div>
+	<div class="corner right">
+		<span class="arc" style:--cx={1890} style:--cy={1047} style:--r={234}></span>
+		<span class="arc" style:--cx={1913} style:--cy={1070} style:--r={211}></span>
+		<span class="arc" style:--cx={1938.75} style:--cy={1095.75} style:--r={184.75}></span>
+		<span class="slant" style:--x={1613} style:--y={891} style:--length={256.84} style:--angle={47.05}></span>
+		<span class="slant" style:--x={1656} style:--y={823} style:--length={352.28} style:--angle={46.61}></span>
+		<span class="slant" style:--x={1705} style:--y={790} style:--length={316.99} style:--angle={47.05}></span>
+	</div>
 
 	<h1>sign-in</h1>
 
@@ -107,9 +124,18 @@
 </main>
 
 <style>
+	/* Sign-in is one 1080px-tall screen, so like the shop it fills the window's height rather than
+	   the 1470px the front page fits. The gutter is worked out again from the new --u. */
+	:global(.artboard:has(> .signin)) {
+		--u: min(100cqw / 1920, 100svh / 1080);
+		--gutter: calc((100cqw - 1920 * var(--u)) / 2);
+	}
+
 	main {
 		position: relative;
 		height: calc(1080 * var(--u));
+		/* Narrow windows leave room below; reaching the bottom keeps the corner ornaments there */
+		min-height: 100svh;
 	}
 
 	/* Hairlines are boxes, not images, so they snap to whole screen pixels and never thin out */
@@ -177,6 +203,65 @@
 		top: calc(31.3 * var(--u));
 		width: calc(246.9 * var(--u));
 		rotate: 44.87deg;
+	}
+
+	/* As big as the artboard, so what's inside keeps Figma's coordinates and is cropped where
+	   Figma's frame crops it, but pinned to the window's bottom corner */
+	.corner {
+		position: absolute;
+		bottom: 0;
+		width: calc(1920 * var(--u));
+		height: calc(1080 * var(--u));
+		overflow: clip;
+		pointer-events: none;
+	}
+
+	.corner.left {
+		left: calc(-1 * var(--gutter));
+	}
+
+	.corner.right {
+		right: calc(-1 * var(--gutter));
+	}
+
+	.upright,
+	.slant,
+	.arc {
+		position: absolute;
+	}
+
+	.upright,
+	.slant {
+		left: calc(var(--x) * var(--u));
+		top: calc(var(--y) * var(--u));
+	}
+
+	/* Down to the frame's bottom edge */
+	.upright {
+		width: max(1px, calc(1 * var(--u)));
+		height: calc((1080 - var(--y)) * var(--u));
+		background: var(--off-white);
+	}
+
+	/* From the left end, turned about it */
+	.slant {
+		width: calc(var(--length) * var(--u));
+		height: max(1px, calc(1 * var(--u)));
+		background: var(--off-white);
+		transform-origin: 0 50%;
+		rotate: calc(var(--angle) * 1deg);
+	}
+
+	/* Whole circles, given by centre and radius, that the corner crops to arcs. The border
+	   straddles the radius like Figma's stroke. */
+	.arc {
+		left: calc((var(--cx) - var(--r) - 0.5) * var(--u));
+		top: calc((var(--cy) - var(--r) - 0.5) * var(--u));
+		box-sizing: border-box;
+		width: calc((2 * var(--r) + 1) * var(--u));
+		aspect-ratio: 1;
+		border: max(1px, calc(1 * var(--u))) solid var(--salmon);
+		border-radius: 50%;
 	}
 
 	h1,
