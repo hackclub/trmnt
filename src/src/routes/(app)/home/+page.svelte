@@ -81,6 +81,8 @@
 		create a project
 	</button>
 
+	<a class="ideas" href={resolve('ideas')}><span>i don’t know what to build!</span></a>
+
 	{#if underReview.length > 0}
 		<section class="under-review">
 			<h2>- under review -</h2>
@@ -232,7 +234,7 @@
 		gap: calc(40 * var(--b));
 		width: calc(819 * var(--b));
 		height: calc(176 * var(--b));
-		margin: calc(82 * var(--u)) auto calc(118.5 * var(--u));
+		margin: calc(82 * var(--u)) auto calc(113.75 * var(--u));
 		padding: 0 0 0 calc(43 * var(--b));
 		border: none;
 		background: var(--accent-orange);
@@ -244,6 +246,32 @@
 	.create img {
 		width: calc(111 * var(--b));
 		height: auto;
+	}
+
+	/* Shrunk to three quarters like the create button above it, and centred where Figma centres it */
+	.ideas {
+		--b: calc(0.75 * var(--u));
+		position: relative;
+		display: block;
+		width: calc(711.516 * var(--b));
+		height: calc(214 * var(--b));
+		margin: 0 auto calc(264.25 * var(--u));
+		background: var(--accent-orange);
+	}
+
+	.ideas span {
+		position: absolute;
+		left: calc(27.816 * var(--b));
+		top: calc(27.771 * var(--b));
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: calc(655.883 * var(--b));
+		height: calc(158.458 * var(--b));
+		background: var(--off-white);
+		font: 700 calc(50 * var(--b)) / normal var(--font-sans);
+		color: var(--accent-orange);
+		white-space: nowrap;
 	}
 
 	.divider {
