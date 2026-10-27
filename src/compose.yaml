@@ -1,4 +1,7 @@
 # Postgres for local development (`bun run db:start`). Production uses a database managed by Orchard.
+# Named after this directory's old name, so it keeps starting the existing local database
+# (volume frontend_db) instead of creating an empty one.
+name: frontend
 services:
   db:
     image: postgres:17-alpine
