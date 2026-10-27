@@ -14,9 +14,16 @@
 		decided: 'decided'
 	};
 
+	const EMPTY: Record<string, string> = {
+		waiting: 'nothing waiting on review!',
+		reviewed: 'nothing reviewed yet!',
+		progress: 'no projects in progress!'
+	};
+
+	// In progress, the queue is of projects rather than submissions
 	function select(id: string) {
 		const url = new URL(page.url.href);
-		url.searchParams.set('submission', id);
+		url.searchParams.set(data.view === 'progress' ? 'project' : 'submission', id);
 		return url.pathname + url.search;
 	}
 
@@ -50,7 +57,12 @@
 
 		<dl class="facts">
 			<div><dt>project author:</dt><dd class="author">{active.author}</dd></div>
-			<div><dt>current hours:</dt><dd class="current-hours">{active.hours.toFixed(1)}</dd></div>
+			<div>
+				<dt>current hours:</dt>
+				<dd class="current-hours">
+					{#await active.liveHours}{active.hours.toFixed(1)}{:then live}{(live ?? active.hours).toFixed(1)}{/await}
+				</dd>
+			</div>
 			<div><dt>project type:</dt><dd>{PROJECT_TYPES[active.type]}</dd></div>
 			<div>
 				<dt>project language:</dt>
@@ -81,6 +93,8 @@
 				<p><b>sent back:</b> {active.reason}</p>
 			{:else if active.status === 'rejected'}
 				<p><b>rejected</b>{active.reason ? `: ${active.reason}` : ''}</p>
+			{:else if !active.status}
+				<p><b>not submitted yet</b></p>
 			{/if}
 			<p class="description" title={active.description}>{active.description}</p>
 		</div>
@@ -142,17 +156,18 @@
 		<button class="filled reject" formaction="?/reject" disabled={!pending}>reject</button>
 	</form>
 {:else}
-	<p class="empty">nothing waiting on review!</p>
+	<p class="empty">{EMPTY[data.view] ?? EMPTY.waiting}</p>
 {/if}
 
 <div class="toggle">
-	<!-- Not in Figma: switching to projects already reviewed -->
+	<!-- Not in Figma: switching to projects already reviewed, or not submitted yet -->
 	<OptionRow
 		label="showing:"
 		param="view"
 		options={[
 			{ value: 'waiting', label: 'waiting' },
-			{ value: 'reviewed', label: 'reviewed' }
+			{ value: 'reviewed', label: 'reviewed' },
+			{ value: 'progress', label: 'in progress' }
 		]}
 	/>
 </div>

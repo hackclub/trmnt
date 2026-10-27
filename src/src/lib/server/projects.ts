@@ -1,12 +1,28 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { resolve } from '$app/paths';
 import { db } from '#lib/server/db/index.ts';
 import { projects, screenshots, users } from '#lib/server/db/schema.ts';
 import { decrypt } from '#lib/server/crypto.ts';
 import { fetchNewProjectNames } from '#lib/server/hackatime.ts';
 import { SCREENSHOT_MAX_BYTES, SCREENSHOT_TYPES } from '#lib/projects.ts';
+import type { SubmissionStatus } from '#lib/types.ts';
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * A column of a project's most recent submission, or null if it's never been submitted. For
+ * queries on projects. Written out with every column qualified, because drizzle leaves column
+ * names bare when a query has one table, and bare "id" in here would mean the submission's.
+ */
+export function latestSubmission<T>(column: 'status' | 'reason' | 'bfts_awarded') {
+	return sql<T | null>`(
+		select latest.${sql.raw(column)} from submissions latest
+		where latest.project_id = projects.id
+		order by latest.created_at desc
+		limit 1
+	)`;
+}
+export const latestStatus = latestSubmission<SubmissionStatus>('status');
 
 /**
  * The Hackatime projects a user can still link: started since the program began, and not

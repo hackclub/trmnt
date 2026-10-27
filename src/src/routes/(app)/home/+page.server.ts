@@ -1,5 +1,5 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { and, desc, eq, max, sql } from 'drizzle-orm';
+import { and, desc, eq, max } from 'drizzle-orm';
 import { resolve } from '$app/paths';
 import { db } from '#lib/server/db/index.ts';
 import { projects, submissions, users } from '#lib/server/db/schema.ts';
@@ -7,28 +7,19 @@ import { requireUser } from '#lib/server/auth/guard.ts';
 import { HACK_CLUB_AUTH_ORIGIN } from '#lib/server/auth/hackclub.ts';
 import { hackatimeEnabled } from '#lib/server/hackatime.ts';
 import { secondsOn, syncHours } from '#lib/server/hours.ts';
-import { linkableHackatimeProjects, readScreenshot, saveScreenshot } from '#lib/server/projects.ts';
+import {
+	latestStatus,
+	latestSubmission,
+	linkableHackatimeProjects,
+	readScreenshot,
+	saveScreenshot
+} from '#lib/server/projects.ts';
 import { checkSubmitter, type SubmitterProblem } from '#lib/server/submissions.ts';
 import { PROJECT_TYPES, type ProjectType } from '#lib/projects.ts';
-import type { OwnProject, Project, SubmissionStatus } from '#lib/types.ts';
+import type { OwnProject, Project } from '#lib/types.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 const LATEST_COUNT = 6;
-
-/**
- * A column of a project's most recent submission, or null if it's never been submitted. For
- * queries on projects. Written out with every column qualified, because drizzle leaves column
- * names bare when a query has one table, and bare "id" in here would mean the submission's.
- */
-function latestSubmission<T>(column: 'status' | 'reason' | 'bfts_awarded') {
-	return sql<T | null>`(
-		select latest.${sql.raw(column)} from submissions latest
-		where latest.project_id = projects.id
-		order by latest.created_at desc
-		limit 1
-	)`;
-}
-const latestStatus = latestSubmission<SubmissionStatus>('status');
 
 export const load: PageServerLoad = async (event) => {
 	// Page and layout loads run in parallel, so this can't rely on the layout's check

@@ -1,12 +1,14 @@
 import { fail } from '@sveltejs/kit';
-import { asc, desc, eq, ne } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, ne, or } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.ts';
 import { projects, submissions, users } from '#lib/server/db/schema.ts';
 import { decrypt } from '#lib/server/crypto.ts';
 import { requireAdmin } from '#lib/server/auth/guard.ts';
 import { airtableEnabled } from '#lib/server/airtable.ts';
 import { fetchTopLanguage } from '#lib/server/hackatime.ts';
+import { secondsOn } from '#lib/server/hours.ts';
 import { PROGRAM_START } from '#lib/server/program.ts';
+import { latestStatus, latestSubmission } from '#lib/server/projects.ts';
 import {
 	approveSubmission,
 	refreshRobert,
@@ -20,9 +22,25 @@ const QUEUE_LENGTH = 60;
 
 export const load: PageServerLoad = async (event) => {
 	requireAdmin(event);
-	// Waiting ones oldest first, so nobody waits long; reviewed ones newest first
-	const reviewed = event.url.searchParams.get('view') === 'reviewed';
+	const view = event.url.searchParams.get('view') ?? 'waiting';
+	const { queue, active } =
+		view === 'progress'
+			? await inProgress(event.url.searchParams.get('project'))
+			: await submitted(view === 'reviewed', event.url.searchParams.get('submission'));
+	return { view, queue, active, robertEnabled, airtableEnabled };
+};
 
+/** The language most of the time on these Hackatime projects went into, streamed */
+function topLanguage(encryptedToken: string | null, names: string[]) {
+	return encryptedToken
+		? decrypt(encryptedToken)
+				.then((token) => fetchTopLanguage(token, names, PROGRAM_START))
+				.catch(() => null)
+		: Promise.resolve(null);
+}
+
+/** Submissions: waiting ones oldest first, so nobody waits long; reviewed ones newest first */
+async function submitted(reviewed: boolean, activeId: string | null) {
 	const queue = await db
 		.select({
 			id: submissions.id,
@@ -40,18 +58,17 @@ export const load: PageServerLoad = async (event) => {
 		.orderBy(reviewed ? desc(submissions.reviewedAt) : asc(submissions.createdAt))
 		.limit(QUEUE_LENGTH);
 
-	const activeId = event.url.searchParams.get('submission') ?? queue[0]?.id;
-	const [active] = activeId
+	const id = activeId ?? queue[0]?.id;
+	const [active] = id
 		? await db
 				.select({ submission: submissions, project: projects, author: users })
 				.from(submissions)
 				.innerJoin(projects, eq(projects.id, submissions.projectId))
 				.innerJoin(users, eq(users.id, projects.userId))
-				.where(eq(submissions.id, activeId))
+				.where(eq(submissions.id, id))
 		: [];
 
 	return {
-		reviewed,
 		queue: queue.map((row) => ({ ...row, author: row.author ?? row.authorEmail })),
 		active: active && {
 			id: active.submission.id,
@@ -64,6 +81,8 @@ export const load: PageServerLoad = async (event) => {
 			demoUrl: active.project.demoUrl,
 			hackatimeProjects: active.project.hackatimeProjects,
 			hours: active.submission.secondsLogged / 3600,
+			// What was logged when it was submitted is what's reviewed
+			liveHours: Promise.resolve(null),
 			approvedHours: active.submission.secondsApproved && active.submission.secondsApproved / 3600,
 			bftsAwarded: active.submission.bftsAwarded,
 			reason: active.submission.reason,
@@ -72,19 +91,78 @@ export const load: PageServerLoad = async (event) => {
 			trustLevel: active.author.hackatimeTrustLevel,
 			robertSent: Boolean(active.submission.robertProjectId),
 			// Both from other services, so streamed rather than holding up the page
-			language: active.author.hackatimeAccessToken
-				? decrypt(active.author.hackatimeAccessToken)
-						.then((token) => fetchTopLanguage(token, active.project.hackatimeProjects, PROGRAM_START))
-						.catch(() => null)
-				: Promise.resolve(null),
+			language: topLanguage(active.author.hackatimeAccessToken, active.project.hackatimeProjects),
 			robert: active.submission.robertProjectId
 				? refreshRobert(active.submission.id, active.submission.robertProjectId).catch(() => null)
 				: Promise.resolve(null)
-		},
-		robertEnabled,
-		airtableEnabled
+		}
 	};
-};
+}
+
+/**
+ * Projects not in review: never submitted, or sent back for changes and not submitted again.
+ * Most hours first, since those are nearest to being submitted. Nothing can be decided on them.
+ */
+async function inProgress(activeId: string | null) {
+	const unsubmitted = or(isNull(latestStatus), eq(latestStatus, 'changes_requested'));
+	const queue = await db
+		.select({
+			id: projects.id,
+			name: projects.name,
+			thumbnail: projects.thumbnailUrl,
+			seconds: projects.secondsLogged,
+			author: users.name,
+			authorEmail: users.email
+		})
+		.from(projects)
+		.innerJoin(users, eq(users.id, projects.userId))
+		.where(unsubmitted)
+		.orderBy(desc(projects.secondsLogged))
+		.limit(QUEUE_LENGTH);
+
+	const id = activeId ?? queue[0]?.id;
+	const [active] = id
+		? await db
+				.select({
+					project: projects,
+					author: users,
+					status: latestStatus,
+					reason: latestSubmission<string>('reason')
+				})
+				.from(projects)
+				.innerJoin(users, eq(users.id, projects.userId))
+				.where(and(eq(projects.id, id), unsubmitted))
+		: [];
+
+	return {
+		queue: queue.map((row) => ({ ...row, author: row.author ?? row.authorEmail })),
+		active: active && {
+			id: active.project.id,
+			status: active.status,
+			name: active.project.name,
+			type: active.project.type,
+			screenshot: active.project.thumbnailUrl,
+			description: active.project.description,
+			repoUrl: active.project.repoUrl,
+			demoUrl: active.project.demoUrl,
+			hackatimeProjects: active.project.hackatimeProjects,
+			hours: active.project.secondsLogged / 3600,
+			// The stored hours are from the owner's last visit to Home, so Hackatime is asked too
+			liveHours: secondsOn(active.author.id, active.project.hackatimeProjects)
+				.then((seconds) => (seconds === null ? null : seconds / 3600))
+				.catch(() => null),
+			approvedHours: null,
+			bftsAwarded: null,
+			reason: active.reason,
+			justification: null,
+			author: active.author.name ?? active.author.email,
+			trustLevel: active.author.hackatimeTrustLevel,
+			robertSent: false,
+			language: topLanguage(active.author.hackatimeAccessToken, active.project.hackatimeProjects),
+			robert: Promise.resolve(null)
+		}
+	};
+}
 
 /** Runs one decision on the submission the form names, reporting how it went */
 async function decide(
