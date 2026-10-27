@@ -4,9 +4,12 @@ const origin = Bun.env.ORIGIN || 'http://127.0.0.1:5173';
 const secret = Bun.env.CRON_SECRET;
 if (!secret) throw new Error('CRON_SECRET is not set');
 
+// In production SvelteKit refuses a POST with no content type and no Origin as a cross-site form
+// submission, so this one says it's JSON
 const response = await fetch(new URL('/internal/track-activity', origin), {
 	method: 'POST',
-	headers: { Authorization: `Bearer ${secret}` }
+	headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' },
+	body: '{}'
 });
 if (!response.ok) {
 	throw new Error(`Tracking activity failed: ${response.status} ${await response.text()}`);
