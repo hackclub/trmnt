@@ -105,8 +105,10 @@
 		</form>
 	{/if}
 
-	<!-- Not in Figma: what's said after a code is sent, and when something goes wrong -->
-	<div class="notes">
+	<!-- In the page's flow, so notes running long make the page taller instead of being cut off -->
+	<div class="below">
+		<p class="ages">Hack Club programs are open to anyone 13-18 (inclusive)</p>
+		<!-- Not in Figma: what's said after a code is sent, and when something goes wrong -->
 		{#if form?.codeSent}
 			<p>
 				we sent a code to {form.email}. it works for {data.codeLifetime} minutes.
@@ -133,8 +135,10 @@
 
 	main {
 		position: relative;
-		height: calc(1080 * var(--u));
-		/* Narrow windows leave room below; reaching the bottom keeps the corner ornaments there */
+		/* Keeps the top margin of .below, its one child in the flow, inside it */
+		display: flow-root;
+		/* The window's whole height, which 1080 * --u never exceeds, so the corner ornaments sit at
+		   its bottom even in narrow windows. Only long notes under the form make it taller. */
 		min-height: 100svh;
 	}
 
@@ -335,11 +339,10 @@
 		color: var(--salmon);
 	}
 
-	.notes {
-		position: absolute;
-		left: calc(440 * var(--u));
-		top: calc(910 * var(--u));
+	.below {
+		position: relative;
 		width: calc(1040 * var(--u));
+		margin: calc(946 * var(--u)) auto 0;
 		display: flex;
 		flex-direction: column;
 		gap: calc(12 * var(--u));
@@ -348,11 +351,17 @@
 		text-align: center;
 	}
 
-	.notes p {
+	.below p {
 		margin: 0;
 	}
 
-	.notes a {
+	.ages {
+		font: 500 calc(30 * var(--u)) / normal var(--font-serif);
+		color: var(--salmon);
+		white-space: nowrap;
+	}
+
+	.below a {
 		color: var(--salmon);
 		text-decoration: underline;
 	}
