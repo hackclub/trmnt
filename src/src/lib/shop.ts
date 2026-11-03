@@ -9,7 +9,7 @@ export const SHOP_ITEMS = {
 	},
 	bwry: {
 		name: 'TRMNL (BWRY)',
-		price: 450,
+		price: 405,
 		description: 'an OG TRMNL, but breaking the mold with a four-color screen! guac\'s favorite.'
 	},
 	byod_license: {
@@ -24,7 +24,7 @@ export const SHOP_ITEMS = {
 	},
 	og: {
 		name: 'TRMNL (Official)',
-		price: 450,
+		price: 405,
 		description: 'an OG TRMNL, straight from the factory and waiting for hackery!'
 	},
 	trmnl_x: {
