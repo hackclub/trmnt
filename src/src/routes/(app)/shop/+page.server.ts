@@ -1,8 +1,11 @@
 import { fail } from '@sveltejs/kit';
 import { requireUser } from '#lib/server/auth/guard.ts';
-import { placeOrder } from '#lib/server/shop.ts';
+import { currentPrices, placeOrder } from '#lib/server/shop.ts';
 import { isAddOnFor, isShopItem, type AddOn } from '#lib/shop.ts';
-import type { Actions } from './$types';
+import type { Actions, PageServerLoad } from './$types';
+
+// Bulk discounts depend on what's been ordered, so prices come from here rather than the catalog
+export const load: PageServerLoad = async () => ({ prices: await currentPrices() });
 
 export const actions: Actions = {
 	buy: async (event) => {

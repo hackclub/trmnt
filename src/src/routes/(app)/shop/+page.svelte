@@ -12,7 +12,7 @@
 	import hand from '#lib/assets/figma/shop/hand.webp';
 	import ogTrmnl from '#lib/assets/figma/shop/og-trmnl.webp';
 	import trmnlX from '#lib/assets/figma/shop/trmnl-x.webp';
-	import { ADD_ONS, orderPrice, SHOP_ITEMS, type ShopItemId } from '#lib/shop.ts';
+	import { ADD_ONS, SHOP_ITEMS, type ShopItemId } from '#lib/shop.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -39,7 +39,7 @@
 
 	let popup: ShopPopup;
 	let buying = $state<ShopItemId>('og');
-	const offer = $derived(offerFor(buying, data.user.balance));
+	const offer = $derived(offerFor(buying, data.prices[buying].price, data.user.balance));
 
 	async function buy(id: ShopItemId) {
 		buying = id;
@@ -48,8 +48,8 @@
 	}
 
 	/** What "buy!" asks before ordering. Positions are Figma pixels from the popup's corner. */
-	function offerFor(id: ShopItemId, balance: number) {
-		const affords = (addOn: 'clarity_kit' | 'byod_license') => balance >= orderPrice(id, addOn);
+	function offerFor(id: ShopItemId, price: number, balance: number) {
+		const affords = (addOn: 'clarity_kit' | 'byod_license') => balance >= price + ADD_ONS[addOn].price;
 
 		if (id === 'og' || id === 'bwry') {
 			return {
@@ -83,7 +83,7 @@
 		}
 
 		// Not in Figma: a stand-in on the Clarity Kit popup's layout until the confirm step is designed
-		const { name, price } = SHOP_ITEMS[id];
+		const { name } = SHOP_ITEMS[id];
 		return {
 			message: `buy the ${name} for ${price} BFTs?`,
 			height: 875,
@@ -146,7 +146,8 @@
 	{#each CARDS as card (card.id)}
 		<ShopItem
 			{...card}
-			affordable={data.user.balance >= SHOP_ITEMS[card.id].price}
+			{...data.prices[card.id]}
+			affordable={data.user.balance >= data.prices[card.id].price}
 			onbuy={() => buy(card.id)}
 		>
 			{@render picture(card.id)}

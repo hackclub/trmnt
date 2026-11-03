@@ -2,7 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import Hatch from '#lib/components/shop/Hatch.svelte';
 	import gift from '#lib/assets/figma/shop/gift-small.svg';
-	import { SHOP_ITEMS, type ShopItemId } from '#lib/shop.ts';
+	import { SHOP_ITEMS, type ItemPrice, type ShopItemId } from '#lib/shop.ts';
 
 	// One card around the shop's circle. Everything is placed from the card's top-left corner in
 	// Figma, not counting the title that sits across its top edge.
@@ -11,6 +11,8 @@
 		x,
 		y,
 		tallTitle = false,
+		price,
+		next,
 		affordable,
 		onbuy,
 		children
@@ -21,6 +23,10 @@
 		y: number;
 		/** For names that wrap onto two lines, like the Founder-Delivered TRMNL's */
 		tallTitle?: boolean;
+		/** In BFTs, with any bulk discount */
+		price: number;
+		/** How many more orders until the bulk discount grows, and the price then */
+		next: ItemPrice['next'];
 		affordable: boolean;
 		onbuy: () => void;
 		/** The item's picture, placed from the card's corner */
@@ -34,9 +40,9 @@
 <div class="item" style:--x={x} style:--y={y} style:--description-max={Math.min(400, 1900 - (x + 256))}>
 	<div class="card">{@render children()}</div>
 	<h2 class="title" class:tall={tallTitle}>{item.name}</h2>
-	<p class="price" class:wide={item.price >= 1000}>
+	<p class="price" class:wide={price >= 1000}>
 		<img src={gift} alt="" />
-		<span class="amount">{item.price}<span class="visually-hidden">{' BFTs'}</span></span>
+		<span class="amount">{price}<span class="visually-hidden">{' BFTs'}</span></span>
 	</p>
 	<button class="buy" disabled={!affordable} aria-describedby="{id}-description" onclick={onbuy}>
 		buy!
@@ -44,6 +50,12 @@
 			<Hatch width={92} height={34} />
 		{/if}
 	</button>
+	{#if next}
+		<!-- Not in Figma: how close its batch is to TRMNL's next bulk discount -->
+		<p class="next">
+			{next.orders} more {next.orders === 1 ? 'order' : 'orders'} → {next.price} for everyone!
+		</p>
+	{/if}
 	<!-- Floats off the card's lower right while it's hovered or focused -->
 	<p class="description" id="{id}-description">{item.description}</p>
 </div>
@@ -159,6 +171,20 @@
 
 	.buy:disabled {
 		cursor: not-allowed;
+	}
+
+	/* One line, centred under the card and a little wider than it, since the X's card sits close
+	   to the bottom of the page */
+	.next {
+		position: absolute;
+		left: calc(-50 * var(--u));
+		top: calc(270 * var(--u));
+		width: calc(344 * var(--u));
+		margin: 0;
+		font: italic 400 calc(18 * var(--u)) / normal var(--font-sans);
+		color: var(--salmon);
+		text-align: center;
+		white-space: nowrap;
 	}
 
 	/* Figma's box is 246 × 152; longer descriptions grow it, wider first and then taller */

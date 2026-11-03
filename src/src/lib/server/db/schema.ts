@@ -207,7 +207,10 @@ export const orders = pgTable(
 		item: text({ enum: Object.keys(SHOP_ITEMS) as [ShopItemId, ...ShopItemId[]] }).notNull(),
 		/** An extra taken while buying, like the Clarity Kit upgrade */
 		addOn: text({ enum: ['clarity_kit', 'byod_license'] as const satisfies readonly AddOn[] }),
-		/** What was paid in BFTs, extra included, so later price changes don't rewrite history */
+		/**
+		 * What was paid in BFTs, extra included and less any bulk discount refunded since, so later
+		 * price changes don't rewrite history
+		 */
 		price: integer().notNull(),
 		status: text({ enum: ['pending', 'fulfilled', 'cancelled'] })
 			.notNull()
@@ -234,7 +237,7 @@ export const ledger = pgTable(
 		/** Positive for credits, negative for spending */
 		amount: integer().notNull(),
 		reason: text({
-			enum: ['submission_approved', 'shop_order', 'shop_refund', 'adjustment']
+			enum: ['submission_approved', 'shop_order', 'shop_refund', 'bulk_discount', 'adjustment']
 		}).notNull(),
 		submissionId: uuid().references(() => submissions.id, { onDelete: 'set null' }),
 		orderId: uuid().references(() => orders.id, { onDelete: 'set null' }),
