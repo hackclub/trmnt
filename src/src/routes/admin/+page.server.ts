@@ -1,5 +1,5 @@
 import { fail } from '@sveltejs/kit';
-import { and, asc, desc, eq, isNull, ne, or } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, or } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.ts';
 import { projects, submissions, users } from '#lib/server/db/schema.ts';
 import { decrypt } from '#lib/server/crypto.ts';
@@ -39,7 +39,12 @@ function topLanguage(encryptedToken: string | null, names: string[]) {
 		: Promise.resolve(null);
 }
 
-/** Submissions: waiting ones oldest first, so nobody waits long; reviewed ones newest first */
+/**
+ * Submissions: waiting ones oldest first, so nobody waits long; reviewed ones newest first.
+ * Reviewed means decided for good. One sent back for changes belongs to a project that's in
+ * progress again, and each resubmission is a new submission, so counting those would list a
+ * project once for every time it was sent back.
+ */
 async function submitted(reviewed: boolean, activeId: string | null) {
 	const queue = await db
 		.select({
@@ -54,7 +59,11 @@ async function submitted(reviewed: boolean, activeId: string | null) {
 		.from(submissions)
 		.innerJoin(projects, eq(projects.id, submissions.projectId))
 		.innerJoin(users, eq(users.id, projects.userId))
-		.where(reviewed ? ne(submissions.status, 'pending') : eq(submissions.status, 'pending'))
+		.where(
+			reviewed
+				? inArray(submissions.status, ['approved', 'rejected'])
+				: eq(submissions.status, 'pending')
+		)
 		.orderBy(reviewed ? desc(submissions.reviewedAt) : asc(submissions.createdAt))
 		.limit(QUEUE_LENGTH);
 
