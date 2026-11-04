@@ -96,6 +96,7 @@ async function submitted(reviewed: boolean, activeId: string | null) {
 			bftsAwarded: active.submission.bftsAwarded,
 			reason: active.submission.reason,
 			justification: active.submission.reviewerNotes,
+			approvalMessage: active.submission.approvalMessage,
 			author: active.author.name ?? active.author.email,
 			trustLevel: active.author.hackatimeTrustLevel,
 			robertSent: Boolean(active.submission.robertProjectId),
@@ -164,6 +165,7 @@ async function inProgress(activeId: string | null) {
 			bftsAwarded: null,
 			reason: active.reason,
 			justification: null,
+			approvalMessage: null,
 			author: active.author.name ?? active.author.email,
 			trustLevel: active.author.hackatimeTrustLevel,
 			robertSent: false,
@@ -197,6 +199,7 @@ export const actions: Actions = {
 					admin,
 					Number(form.get('hours')),
 					String(form.get('justification') ?? ''),
+					String(form.get('message') ?? ''),
 					event.url
 				),
 			'Approved. Its record is in Airtable, waiting on the Unified YSWS automation there.'

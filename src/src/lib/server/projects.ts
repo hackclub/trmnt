@@ -14,7 +14,9 @@ type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
  * queries on projects. Written out with every column qualified, because drizzle leaves column
  * names bare when a query has one table, and bare "id" in here would mean the submission's.
  */
-export function latestSubmission<T>(column: 'status' | 'reason' | 'bfts_awarded') {
+export function latestSubmission<T>(
+	column: 'status' | 'reason' | 'approval_message' | 'bfts_awarded'
+) {
 	return sql<T | null>`(
 		select latest.${sql.raw(column)} from submissions latest
 		where latest.project_id = projects.id

@@ -96,14 +96,17 @@ function usDate(date: Date) {
 }
 
 /**
- * Approves a submission for `hours`, with the reviewer's human-written justification. Returns a
- * problem, or null once it's approved, recorded in Airtable and Robert, and its BFTs credited.
+ * Approves a submission for `hours`, with the reviewer's human-written justification for the
+ * Unified YSWS database and an optional message for the participant, who never sees the
+ * justification. Returns a problem, or null once it's approved, recorded in Airtable and Robert,
+ * and its BFTs credited.
  */
 export async function approveSubmission(
 	submissionId: string,
 	reviewer: SessionUser,
 	hours: number,
 	justification: string,
+	message: string,
 	requestUrl: URL
 ): Promise<string | null> {
 	const row = await load(submissionId);
@@ -192,6 +195,7 @@ export async function approveSubmission(
 				bftsAwarded: bfts,
 				reviewerId: reviewer.id,
 				reviewerNotes: justification,
+				approvalMessage: message.trim() || null,
 				reviewedAt: new Date(),
 				airtableRecordId,
 				...(blocked.robert && { robertState: 'decided' })

@@ -31,7 +31,7 @@
 		{/if}
 	</div>
 	{#if own?.status === 'approved' && own.bftsAwarded}
-		<p class="tag bfts">
+		<p class="tag bfts" title={own.approvalMessage ?? undefined}>
 			<img src={gift} alt="" />
 			<span class="inner">+{own.bftsAwarded}<span class="visually-hidden">{' BFTs'}</span></span>
 		</p>

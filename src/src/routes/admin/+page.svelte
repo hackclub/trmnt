@@ -120,8 +120,17 @@
 			id="justification"
 			class="box justification"
 			name="justification"
-			placeholder="justification here: the technical features behind these hours, and why if you lowered them"
+			placeholder="justification here, for Unified YSWS: the technical features behind these hours, and why if you lowered them. they won't see it."
 			disabled={!pending}>{active.justification ?? ''}</textarea
+		>
+		<!-- Not in Figma: what they're told instead, so the justification can stay technical -->
+		<label class="message-label" for="message">Message to them:</label>
+		<textarea
+			id="message"
+			class="box message"
+			name="message"
+			placeholder="like “great job!”: they'll see this, and not the justification. optional."
+			disabled={!pending}>{active.approvalMessage ?? ''}</textarea
 		>
 		<button class="filled approve" formaction="?/approve" disabled={!pending}>approve</button>
 
@@ -361,7 +370,8 @@
 	}
 
 	.approve-for,
-	.justification-label {
+	.justification-label,
+	.message-label {
 		font: italic 500 calc(36 * var(--u)) / normal var(--font-sans);
 		color: var(--dark-gray);
 	}
@@ -403,11 +413,24 @@
 		color: var(--dark-gray);
 	}
 
+	/* Figma's justification box, shortened to fit the message box under it */
 	.justification {
 		left: calc(898 * var(--u));
 		top: calc(766.88 * var(--u));
 		width: calc(541 * var(--u));
-		height: calc(348 * var(--u));
+		height: calc(204 * var(--u));
+	}
+
+	.message-label {
+		left: calc(898 * var(--u));
+		top: calc(980.88 * var(--u));
+	}
+
+	.message {
+		left: calc(898 * var(--u));
+		top: calc(1028.88 * var(--u));
+		width: calc(541 * var(--u));
+		height: calc(86 * var(--u));
 	}
 
 	.approve {

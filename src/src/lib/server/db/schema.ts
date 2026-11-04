@@ -143,6 +143,8 @@ export const submissions = pgTable(
 		reason: text(),
 		/** The approval's justification: internal, for Airtable and spot-checkers */
 		reviewerNotes: text(),
+		/** What the reviewer said on approving it, which the participant sees */
+		approvalMessage: text(),
 		/** BFTs the approval awarded */
 		bftsAwarded: integer(),
 		/** Its project in Robert, Telescreen's fraud review desk, once sent there */

@@ -43,6 +43,13 @@
       "when": 1792701673689,
       "tag": "0005_admin_review",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793478155357,
+      "tag": "0006_approval_message",
+      "breakpoints": true
     }
   ]
 }

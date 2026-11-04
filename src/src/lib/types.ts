@@ -30,6 +30,8 @@ export interface OwnProject extends Project {
 	status: SubmissionStatus | null;
 	/** Why the latest submission was sent back or rejected */
 	reason: string | null;
+	/** What the reviewer said on approving it */
+	approvalMessage: string | null;
 	/** What its approval awarded */
 	bftsAwarded: number | null;
 }

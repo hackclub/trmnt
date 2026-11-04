@@ -51,6 +51,7 @@ export const load: PageServerLoad = async (event) => {
 				description: projects.description,
 				status: latestStatus,
 				reason: latestSubmission<string>('reason'),
+				approvalMessage: latestSubmission<string>('approval_message'),
 				bftsAwarded: latestSubmission<number>('bfts_awarded')
 			})
 			.from(projects)
@@ -78,6 +79,7 @@ export const load: PageServerLoad = async (event) => {
 				description: row.description,
 				status: row.status,
 				reason: row.reason,
+				approvalMessage: row.approvalMessage,
 				bftsAwarded: row.bftsAwarded
 			})
 		),
