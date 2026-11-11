@@ -4,7 +4,7 @@ import { dailyActivity, projects, users } from '#lib/server/db/schema.ts';
 import { decrypt } from '#lib/server/crypto.ts';
 import { fetchMe, fetchSeconds } from '#lib/server/hackatime.ts';
 import { forgetHackatime } from '#lib/server/hours.ts';
-import { banIfRedOnHackatime } from '#lib/server/users.ts';
+import { followHackatimeBan } from '#lib/server/users.ts';
 import { PROGRAM_START } from '#lib/server/program.ts';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -76,8 +76,9 @@ async function trackPerson(
 		.set({ hackatimeUserId: me.id, hackatimeTrustLevel: me.trustLevel, githubUsername: me.githubUsername })
 		.where(eq(users.id, userId))
 		.returning();
-	// Anyone Hackatime bans is banned here too, unless an admin has let them back in
-	await banIfRedOnHackatime(user, me.trustLevel);
+	// Anyone Hackatime bans is banned here too, unless an admin has let them back in, and is let
+	// back in once Hackatime does
+	await followHackatimeBan(user, me.trustLevel);
 
 	let seconds = 0;
 	for (const day of days) {

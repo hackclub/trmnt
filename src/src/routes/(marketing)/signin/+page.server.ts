@@ -11,7 +11,8 @@ import { hackClubAuthEnabled } from '#lib/server/auth/hackclub.ts';
 import { safeRedirect } from '#lib/server/auth/guard.ts';
 import { createSession } from '#lib/server/auth/session.ts';
 import { EmailNotConfiguredError, sendSignInCode } from '#lib/server/email.ts';
-import { findOrCreateByEmail } from '#lib/server/users.ts';
+import { fetchTrustBySlackId } from '#lib/server/hackatime.ts';
+import { findOrCreateByEmail, followHackatimeBan } from '#lib/server/users.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = ({ locals, url }) => {
@@ -74,7 +75,14 @@ export const actions: Actions = {
 		}
 
 		const user = await findOrCreateByEmail(email);
-		if (user.bannedAt) {
+		// Hackatime bans and unbans count here too, for accounts linked to Hack Club
+		const trustLevel = user.slackId
+			? await fetchTrustBySlackId(user.slackId).catch((err) => {
+					console.error('Checking Hackatime trust failed', err);
+					return null;
+				})
+			: null;
+		if (await followHackatimeBan(user, trustLevel)) {
 			return fail(403, { email, codeSent: true, message: 'This account has been banned from TRMNT.' });
 		}
 		await createSession(cookies, user.id);

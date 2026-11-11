@@ -116,17 +116,29 @@ export async function liftBan(userId: string) {
 		.where(eq(users.id, userId));
 }
 
+/** Why someone was banned automatically, which is how a ban is known to be Hackatime's to lift */
+const HACKATIME_BAN_REASON = 'Hackatime trust level is red';
+
 /**
- * Bans someone Hackatime has banned (trust level red), unless an admin has already let them
- * back in. Returns whether they're banned now.
+ * Keeps someone's ban in step with Hackatime's: bans them when their trust level is red, unless
+ * an admin has already let them back in, and lifts a ban that came from Hackatime once it isn't
+ * red any more. Bans an admin made stay. Returns whether they're banned now.
  */
-export async function banIfRedOnHackatime(
-	user: Pick<User, 'id' | 'bannedAt' | 'banLiftedAt'>,
+export async function followHackatimeBan(
+	user: Pick<User, 'id' | 'bannedAt' | 'banReason' | 'banLiftedAt'>,
 	trustLevel: string | null
 ): Promise<boolean> {
-	if (user.bannedAt) return true;
+	if (user.bannedAt) {
+		// Null means Hackatime didn't say, which isn't enough to let them back in
+		if (user.banReason !== HACKATIME_BAN_REASON || trustLevel === null || trustLevel === 'red') {
+			return true;
+		}
+		// Not banLiftedAt, which is an admin's call, so turning red again bans them again
+		await db.update(users).set({ bannedAt: null, banReason: null }).where(eq(users.id, user.id));
+		return false;
+	}
 	if (trustLevel !== 'red' || user.banLiftedAt) return false;
-	await banUser(user.id, 'Hackatime trust level is red');
+	await banUser(user.id, HACKATIME_BAN_REASON);
 	return true;
 }
 

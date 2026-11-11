@@ -9,7 +9,7 @@ import { publicCallbackUrl } from '#lib/server/origin.ts';
 import { users } from '#lib/server/db/schema.ts';
 import { endSession } from '#lib/server/auth/session.ts';
 import { fetchMe, finishFlow, FLOW_COOKIE, type ConnectFlow } from '#lib/server/hackatime.ts';
-import { banIfRedOnHackatime } from '#lib/server/users.ts';
+import { followHackatimeBan } from '#lib/server/users.ts';
 import type { RequestHandler } from './$types';
 
 // Hackatime sends the browser back here with a code to exchange for an access token
@@ -49,7 +49,7 @@ export const GET: RequestHandler = async (event) => {
 		.returning();
 
 	// Anyone Hackatime has banned is banned here too
-	if (await banIfRedOnHackatime(updated, me?.trustLevel ?? null)) {
+	if (await followHackatimeBan(updated, me?.trustLevel ?? null)) {
 		await endSession(event.cookies);
 		redirect(303, `${resolve('signin')}?error=banned`);
 	}

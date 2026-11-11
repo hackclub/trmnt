@@ -11,7 +11,7 @@ import { takeFlow } from '#lib/server/auth/oauth-flow.ts';
 import { createSession } from '#lib/server/auth/session.ts';
 import { publicCallbackUrl } from '#lib/server/origin.ts';
 import { fetchTrustBySlackId } from '#lib/server/hackatime.ts';
-import { banIfRedOnHackatime, findOrCreateByHackClub, linkHackClub } from '#lib/server/users.ts';
+import { findOrCreateByHackClub, followHackatimeBan, linkHackClub } from '#lib/server/users.ts';
 import type { RequestHandler } from './$types';
 
 // Hack Club sends the browser back here with a code to exchange for the person's identity
@@ -42,7 +42,7 @@ export const GET: RequestHandler = async ({ url, cookies, locals }) => {
 					return null;
 				})
 			: null;
-		if (await banIfRedOnHackatime(user, trustLevel)) return fail('banned');
+		if (await followHackatimeBan(user, trustLevel)) return fail('banned');
 		await createSession(cookies, user.id);
 	}
 
